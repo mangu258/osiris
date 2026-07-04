@@ -566,9 +566,13 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
         'passenger','#66BB6A', 'fishing','#AB47BC', 'hsc','#FFD54F',
         '#B0BEC5'] as any;
       map.addLayer({ id: 'ship-dots', type: 'circle', source: 'maritime-ships', paint: {
-        'circle-radius': ['interpolate',['linear'],['zoom'], 1,2, 5,4, 10,6],
+        // Tiny crisp dots so a dense cluster (e.g. Baltic AIS) reads as thousands
+        // of individual vessels rather than one blob, then grow with zoom.
+        'circle-radius': ['interpolate',['linear'],['zoom'], 1,1, 4,1.6, 7,3, 11,5],
         'circle-color': shipColor,
-        'circle-opacity': 0.75,
+        'circle-opacity': ['interpolate',['linear'],['zoom'], 1,0.7, 6,0.85, 10,1],
+        'circle-stroke-width': ['interpolate',['linear'],['zoom'], 6,0, 8,0.5],
+        'circle-stroke-color': '#00121a',
       }});
       map.addLayer({ id: 'ship-label', type: 'symbol', source: 'maritime-ships', minzoom: 7, layout: {
         'text-field': ['get','name'], 'text-size': 9, 'text-font': ['Open Sans Regular'],
@@ -1238,6 +1242,23 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
     setGeo('maritime-choke', activeLayers.maritime && data.maritime_chokepoints ? data.maritime_chokepoints.map((c: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [c.lng, c.lat] }, properties: { name: c.name, traffic: c.traffic, risk: c.risk } })) : []);
     setGeo('maritime-ships', activeLayers.maritime && data.maritime_ships ? data.maritime_ships.map((s: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lng, s.lat] }, properties: { name: s.name || s.mmsi?.toString(), type: s.type || 'cargo', speed: s.speed, heading: s.heading, destination: s.destination, flag: s.flag } })) : []);
   }, [mapReady, data.maritime_ports, data.maritime_chokepoints, data.maritime_ships, activeLayers.maritime, setGeo]);
+
+  // Ship-type sublayers — filter the vessel dots by which categories are enabled.
+  useEffect(() => {
+    if (!mapReady) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const enabled: string[] = [];
+    if (activeLayers.ship_cargo) enabled.push('cargo', 'hsc', 'other');
+    if (activeLayers.ship_tanker) enabled.push('tanker');
+    if (activeLayers.ship_passenger) enabled.push('passenger');
+    if (activeLayers.ship_fishing) enabled.push('fishing');
+    if (activeLayers.ship_military) enabled.push('military');
+    const filter = ['in', ['get', 'type'], ['literal', enabled]] as any;
+    for (const id of ['ship-dots', 'ship-label']) {
+      if (map.getLayer(id)) map.setFilter(id, filter);
+    }
+  }, [mapReady, activeLayers.ship_cargo, activeLayers.ship_tanker, activeLayers.ship_passenger, activeLayers.ship_fishing, activeLayers.ship_military]);
 
   useEffect(() => {
     if (!mapReady) return;

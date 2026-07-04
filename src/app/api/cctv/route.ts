@@ -22,6 +22,8 @@ import { fetchSwitzerlandCameras } from './switzerland';
 import { fetchFinlandCameras } from './finland';
 import { fetchHongKongCameras } from './hongkong';
 import { fetchUtahCameras } from './utah';
+import { fetchIcelandCameras } from './iceland';
+import { fetchNewZealandCameras } from './newzealand';
 
 /**
  * OSIRIS — Worldwide CCTV Camera API v2
@@ -427,6 +429,8 @@ const REGION_FETCHERS: Record<string, () => Promise<any[]>> = {
   'finland': fetchFinlandCameras,
   'hongkong': fetchHongKongCameras,
   'utah': fetchUtahCameras,
+  'iceland': fetchIcelandCameras,
+  'newzealand': fetchNewZealandCameras,
 };
 
 // Determine which regions to fetch based on viewport bounds
@@ -459,12 +463,14 @@ function getRegionsForBounds(lat: number, lng: number, radius: number): string[]
   const inSpain = lat > 27 && lat < 43.8 && lng > -18.2 && lng < 4.4;
   const inPoland = lat > 49.0 && lat < 55.0 && lng > 14.1 && lng < 24.1;
   const inFinland = lat > 59.5 && lat < 70.1 && lng > 20 && lng < 31.6;
+  const inIceland = lat > 63 && lat < 67 && lng > -25 && lng < -13;
   const inBalkans = inBulgaria || inGreece || inSerbia || inMacedonia || inRomania || inTurkey;
   const inWesternEurope = inItaly || inCzechia || inSlovakia || inGermany || inFrance || inSpain || inPoland || inFinland;
 
   if (lat > 35 && lat < 72 && lng > -11 && lng < 40 && !inBalkans && !inWesternEurope) {
     regions.push('europe');
   }
+  if (inIceland) regions.push('iceland');
   if (inBulgaria) regions.push('bulgaria');
   if (inGreece) regions.push('greece');
   if (inSerbia) regions.push('serbia');
@@ -486,6 +492,8 @@ function getRegionsForBounds(lat: number, lng: number, radius: number): string[]
 
   // Japan
   if (lat > 24 && lat < 46 && lng > 122 && lng < 154) regions.push('japan');
+  // New Zealand
+  if (lat > -47.5 && lat < -34 && lng > 166 && lng < 179) regions.push('newzealand');
 
   // Hong Kong
   if (lat > 22.1 && lat < 22.6 && lng > 113.8 && lng < 114.4) regions.push('hongkong');
@@ -496,6 +504,32 @@ function getRegionsForBounds(lat: number, lng: number, radius: number): string[]
   if (lat > -45 && lat < -10 && lng > 110 && lng < 155) regions.push('asia');
 
   return regions.length > 0 ? regions : ['uk', 'us-east']; // Default fallback
+}
+
+// Per-region camera cache. A single region timing out under load (e.g. Caltrans,
+// which serves San Diego D11 + LA D7) must NOT drop its cameras from the aggregate —
+// otherwise a partial page-load fetch permanently loses them for the session. Each
+// region is bounded by a budget; on failure we serve the last good result.
+const REGION_BUDGET_MS = 20000;
+const REGION_CACHE_TTL = 15 * 60 * 1000;
+const regionCache = new Map<string, { cams: any[]; at: number }>();
+
+function withBudget(p: Promise<any[]>): Promise<any[]> {
+  return Promise.race([
+    p.catch(() => []),
+    new Promise<any[]>(resolve => setTimeout(() => resolve([]), REGION_BUDGET_MS)),
+  ]);
+}
+
+async function fetchRegionCached(r: string): Promise<any[]> {
+  const fresh = await withBudget(REGION_FETCHERS[r]());
+  if (fresh.length > 0) {
+    regionCache.set(r, { cams: fresh, at: Date.now() });
+    return fresh;
+  }
+  const cached = regionCache.get(r);
+  if (cached && Date.now() - cached.at < REGION_CACHE_TTL) return cached.cams; // keep last-good
+  return fresh;
 }
 
 export async function GET(request: Request) {
@@ -519,17 +553,8 @@ export async function GET(request: Request) {
       regionsToFetch = Object.keys(REGION_FETCHERS);
     }
 
-    // Bound each region so a single hung upstream (a dead traffic-cam server)
-    // can't stall the whole batch — return whatever loaded within the budget.
-    const REGION_BUDGET_MS = 15000;
-    const withBudget = (p: Promise<any[]>): Promise<any[]> =>
-      Promise.race([
-        p.catch(() => []),
-        new Promise<any[]>(resolve => setTimeout(() => resolve([]), REGION_BUDGET_MS)),
-      ]);
-
     const results = await Promise.allSettled(
-      regionsToFetch.map(r => withBudget(REGION_FETCHERS[r]()))
+      regionsToFetch.map(r => fetchRegionCached(r))
     );
 
     const allCameras: any[] = [];
