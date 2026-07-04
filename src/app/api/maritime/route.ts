@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
 import WebSocket from 'ws';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
-const execFileP = promisify(execFile);
 
 /**
  * OSIRIS — Maritime Intelligence
@@ -194,115 +190,6 @@ async function fetchDigitraffic(): Promise<any[]> {
   return dtInflight;
 }
 
-// ── GLOBAL keyless ship source: MarineTraffic's public map tiles ──
-// The marinetraffic.com map itself pulls vessels from these tile endpoints with
-// no API key. We fetch the 16 zoom-2 tiles that cover the whole planet (paced to
-// avoid rate-limiting), merge by ship id, and cache for 60s. Includes SAT-AIS,
-// so coverage is worldwide (open ocean too), not just coastal.
-// Zoom 1 = just 4 tiles cover the whole planet. A small, slow footprint (fetched
-// sequentially, cached 3 min) keeps us under MarineTraffic's Cloudflare rate limit
-// — a bigger burst gets the IP temporarily 403'd.
-const MT_Z = 1;
-const MT_HEADERS: Record<string, string> = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Referer': 'https://www.marinetraffic.com/en/ais/home/centerx:0/centery:0/zoom:2',
-  'X-Requested-With': 'XMLHttpRequest',
-  'Accept': 'application/json, text/plain, */*',
-  'Accept-Language': 'en-US,en;q=0.9',
-};
-let mtCache: any[] = [];
-let mtCacheAt = 0;
-let mtInflight: Promise<any[]> | null = null;
-const MT_TTL = 300000; // 5 min — fetch at most 4 tiles per 5 min (gentle)
-// If MarineTraffic rate-limits us (403), back off for 30 min rather than keep
-// hammering — this respects their limiter AND lets the IP leave the penalty box.
-let mtCooldownUntil = 0;
-const MT_COOLDOWN = 30 * 60 * 1000;
-
-function mtType(name: string): string {
-  const t = (name || '').toLowerCase();
-  if (t.includes('tanker')) return 'tanker';
-  if (t.includes('cargo')) return 'cargo';
-  if (t.includes('passenger')) return 'passenger';
-  if (t.includes('fishing')) return 'fishing';
-  if (t.includes('military') || t.includes('navy')) return 'military';
-  if (t.includes('high speed') || t.includes('wig')) return 'hsc';
-  return 'other';
-}
-
-// Cloudflare 403s Node's fetch on TLS fingerprint alone (curl with identical
-// headers passes), so tiles go through curl; fetch stays as a fallback for
-// environments without a curl binary.
-async function fetchMtTile(url: string): Promise<{ status: number; body: string }> {
-  try {
-    const args = ['-s', '--compressed', '-m', '12', '-w', '\n%{http_code}', url];
-    for (const [k, v] of Object.entries(MT_HEADERS)) args.push('-H', `${k}: ${v}`);
-    const { stdout } = await execFileP('curl', args, { maxBuffer: 32 * 1024 * 1024 });
-    const i = stdout.lastIndexOf('\n');
-    return { status: parseInt(stdout.slice(i + 1), 10) || 0, body: stdout.slice(0, i) };
-  } catch {
-    const r = await fetch(url, { headers: MT_HEADERS, signal: AbortSignal.timeout(12000) });
-    return { status: r.status, body: r.ok ? await r.text() : '' };
-  }
-}
-
-async function fetchMarineTraffic(): Promise<any[]> {
-  if (Date.now() - mtCacheAt < MT_TTL) return mtCache;
-  if (Date.now() < mtCooldownUntil) return mtCache; // backing off from a 403
-  if (mtInflight) return mtInflight;
-  mtInflight = (async () => {
-    try {
-      const n = 1 << MT_Z; // 2 → 4 tiles
-      const tiles: [number, number][] = [];
-      for (let x = 0; x < n; x++) for (let y = 0; y < n; y++) tiles.push([x, y]);
-
-      const seen = new Map<string, any>();
-      // Sequential with a pause between tiles — gentle on the rate limiter.
-      for (let i = 0; i < tiles.length; i++) {
-        const [x, y] = tiles[i];
-        try {
-          const r = await fetchMtTile(`https://www.marinetraffic.com/getData/get_data_json_4/z:${MT_Z}/X:${x}/Y:${y}/station:0`);
-          if (r.status === 403 || r.status === 429) {
-            // Rate-limited → stop immediately and cool down; keep serving the fallback.
-            mtCooldownUntil = Date.now() + MT_COOLDOWN;
-            break;
-          }
-          if (r.status >= 200 && r.status < 300 && r.body) {
-            const data = JSON.parse(r.body);
-            for (const v of (data.data?.rows || [])) {
-              const lat = parseFloat(v.LAT), lng = parseFloat(v.LON);
-              if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-              const id = v.SHIP_ID || `${lat},${lng}`;
-              if (seen.has(id)) continue;
-              const nm = v.SHIPNAME && v.SHIPNAME !== '[SAT-AIS]' ? v.SHIPNAME.trim() : '';
-              seen.set(id, {
-                id, mmsi: id,
-                lat, lng,
-                speed: (parseFloat(v.SPEED) || 0) / 10,
-                heading: parseFloat(v.HEADING) || parseFloat(v.COURSE) || 0,
-                name: nm || 'Vessel',
-                destination: '',
-                type: mtType(v.TYPE_NAME),
-                source: 'marinetraffic',
-                timestamp: Date.now(),
-              });
-            }
-          }
-        } catch { /* skip this tile */ }
-        if (i < tiles.length - 1) await new Promise(r => setTimeout(r, 600));
-      }
-      const ships = Array.from(seen.values());
-      if (ships.length > 0) { mtCache = ships; mtCacheAt = Date.now(); }
-      return mtCache;
-    } catch {
-      return mtCache;
-    } finally {
-      mtInflight = null;
-    }
-  })();
-  return mtInflight;
-}
-
 function connectAisStream() {
   if (globalForAis.isAisConnecting) return;
   const apiKey = process.env.AIS_API_KEY;
@@ -350,6 +237,15 @@ function connectAisStream() {
     ws.send(JSON.stringify(subscriptionMessage));
   });
 
+  // Map AIS ship types to OSIRIS categories
+  const getOsirisShipType = (typeCode: number) => {
+    if (!typeCode) return 'cargo';
+    if (typeCode >= 80 && typeCode <= 89) return 'tanker';
+    if (typeCode >= 70 && typeCode <= 79) return 'cargo';
+    if (typeCode === 35) return 'military';
+    return 'cargo';
+  };
+
   ws.on("message", (data) => {
     try {
       const parsed = JSON.parse(data.toString());
@@ -377,7 +273,7 @@ function connectAisStream() {
         const staticData = parsed.Message.ShipStaticData;
         existing.name = staticData.Name ? staticData.Name.trim() : existing.name;
         existing.destination = staticData.Destination ? staticData.Destination.trim() : existing.destination;
-        existing.type = aisTypeToCategory(staticData.Type); // shared mapping → matches sublayers
+        existing.type = getOsirisShipType(staticData.Type);
       }
 
       // Only store if we have coordinates
@@ -427,9 +323,8 @@ export async function GET() {
     return NextResponse.json(respCache, { headers: { 'Cache-Control': EDGE_CC } });
   }
 
-  // GLOBAL keyless via MarineTraffic tiles (primary) + Digitraffic Baltic detail
-  // + keyed aisstream (if configured). All merged by id.
-  const [mtShips, dtShips] = await Promise.all([fetchMarineTraffic(), fetchDigitraffic()]);
+  // Keyless Digitraffic feed (always) + keyed aisstream cache (if configured), merged by MMSI.
+  const dtShips = await fetchDigitraffic();
 
   // Clean up stale aisstream ships (older than 10 minutes)
   const now = Date.now();
@@ -439,16 +334,10 @@ export async function GET() {
     }
   }
 
-  const byId = new Map<string, any>();
-  if (mtShips.length > 500) {
-    // MarineTraffic is up → global coverage. Use it as the base.
-    for (const s of mtShips) byId.set(String(s.id), s);
-  } else {
-    // MarineTraffic blocked/failed → fall back to the keyless Baltic feed.
-    for (const s of dtShips) byId.set(`dt-${s.mmsi}`, s);
-  }
-  for (const s of shipsCache.values()) byId.set(`ais-${s.mmsi}`, s); // aisstream (if keyed)
-  let ships = Array.from(byId.values());
+  const byMmsi = new Map<number, any>();
+  for (const s of dtShips) byMmsi.set(s.mmsi, s);
+  for (const s of shipsCache.values()) byMmsi.set(s.mmsi, s); // aisstream (global) overrides
+  let ships = Array.from(byMmsi.values());
   if (ships.length > SHIP_CAP) ships = ships.slice(0, SHIP_CAP);
 
   // Dynamically calculate live traffic (Fast approximation of Haversine)
@@ -519,7 +408,7 @@ export async function GET() {
     total_ports: dynamicPorts.length,
     total_chokepoints: dynamicChokepoints.length,
     total_ships: ships.length,
-    sources: ['MarineTraffic (global)', 'Digitraffic marine AIS'].concat(process.env.AIS_API_KEY ? ['aisstream.io'] : []),
+    sources: (process.env.AIS_API_KEY ? ['aisstream.io'] : []).concat(['Digitraffic marine AIS']),
     timestamp: new Date().toISOString(),
   };
   respCache = payload;
