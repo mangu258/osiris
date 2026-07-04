@@ -85,6 +85,33 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
     map.addImage(id, { width: size, height: size, data: new Uint8Array(ctx.getImageData(0, 0, size, size).data) });
   }, []);
 
+  // Directional vessel hull (bow points "north" so icon-rotate can aim it at the
+  // ship's heading). Dark outline keeps it crisp over land or sea. Reads as a
+  // live AIS plot rather than a field of flat dots.
+  const createShipIcon = useCallback((map: maplibregl.Map, id: string, color: string, size = 22) => {
+    if (map.hasImage(id)) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    const cx = size / 2, cy = size / 2;
+    const hull = () => {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - size * 0.44);              // bow
+      ctx.lineTo(cx + size * 0.17, cy - size * 0.06);
+      ctx.lineTo(cx + size * 0.17, cy + size * 0.34); // stern (starboard)
+      ctx.lineTo(cx - size * 0.17, cy + size * 0.34); // stern (port)
+      ctx.lineTo(cx - size * 0.17, cy - size * 0.06);
+      ctx.closePath();
+    };
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(0,12,18,0.92)';
+    ctx.lineWidth = Math.max(1.5, size * 0.1);
+    hull(); ctx.stroke();
+    ctx.fillStyle = color;
+    hull(); ctx.fill();
+    map.addImage(id, { width: size, height: size, data: new Uint8Array(ctx.getImageData(0, 0, size, size).data) });
+  }, []);
+
   useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current;
@@ -560,24 +587,43 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
         'line-opacity': ['interpolate',['linear'],['zoom'], 1, 0.3, 5, 0.45, 10, 0.7],
       }});
 
-      // Maritime Ships (moving entities) — ocean teal family
+      // Maritime Ships — colored by vessel class.
       const shipColor = ['match', ['get','type'],
-        'military','#D32F2F', 'tanker','#E65100', 'cargo','#26C6DA',
-        'passenger','#66BB6A', 'fishing','#AB47BC', 'hsc','#FFD54F',
+        'military','#FF5252', 'tanker','#FF9100', 'cargo','#26C6DA',
+        'passenger','#69F0AE', 'fishing','#E040FB', 'hsc','#FFD54F',
         '#B0BEC5'] as any;
-      map.addLayer({ id: 'ship-dots', type: 'circle', source: 'maritime-ships', paint: {
-        // Tiny crisp dots so a dense cluster (e.g. Baltic AIS) reads as thousands
-        // of individual vessels rather than one blob, then grow with zoom.
-        'circle-radius': ['interpolate',['linear'],['zoom'], 1,1, 4,1.6, 7,3, 11,5],
+      const shipIcon = ['match', ['get','type'],
+        'military','ship-military', 'tanker','ship-tanker', 'cargo','ship-cargo',
+        'passenger','ship-passenger', 'fishing','ship-fishing', 'hsc','ship-hsc',
+        'ship-other'] as any;
+      createShipIcon(map, 'ship-military', '#FF5252');
+      createShipIcon(map, 'ship-tanker', '#FF9100');
+      createShipIcon(map, 'ship-cargo', '#26C6DA');
+      createShipIcon(map, 'ship-passenger', '#69F0AE');
+      createShipIcon(map, 'ship-fishing', '#E040FB');
+      createShipIcon(map, 'ship-hsc', '#FFD54F');
+      createShipIcon(map, 'ship-other', '#B0BEC5');
+
+      // Far zoom: tiny luminous dots so a dense field reads as thousands of vessels.
+      map.addLayer({ id: 'ship-dots', type: 'circle', source: 'maritime-ships', maxzoom: 6, paint: {
+        'circle-radius': ['interpolate',['linear'],['zoom'], 1,1, 4,1.8, 6,3],
         'circle-color': shipColor,
-        'circle-opacity': ['interpolate',['linear'],['zoom'], 1,0.7, 6,0.85, 10,1],
-        'circle-stroke-width': ['interpolate',['linear'],['zoom'], 6,0, 8,0.5],
-        'circle-stroke-color': '#00121a',
+        'circle-opacity': ['interpolate',['linear'],['zoom'], 1,0.75, 6,0.95],
+        'circle-blur': 0.25,
       }});
-      map.addLayer({ id: 'ship-label', type: 'symbol', source: 'maritime-ships', minzoom: 7, layout: {
-        'text-field': ['get','name'], 'text-size': 9, 'text-font': ['Open Sans Regular'],
-        'text-offset': [0, 1.2], 'text-allow-overlap': false,
-      }, paint: { 'text-color': shipColor, 'text-halo-color': '#000', 'text-halo-width': 1 }});
+      // Closer: directional hulls rotated to each ship's heading — a live AIS plot.
+      map.addLayer({ id: 'ship-vessels', type: 'symbol', source: 'maritime-ships', minzoom: 5.5, layout: {
+        'icon-image': shipIcon,
+        'icon-size': ['interpolate',['linear'],['zoom'], 5.5,0.45, 9,0.8, 13,1.2],
+        'icon-rotate': ['coalesce', ['get','heading'], 0],
+        'icon-rotation-alignment': 'map',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+      }});
+      map.addLayer({ id: 'ship-label', type: 'symbol', source: 'maritime-ships', minzoom: 8, layout: {
+        'text-field': ['get','name'], 'text-size': 10, 'text-font': ['Open Sans Regular'],
+        'text-offset': [0, 1.5], 'text-allow-overlap': false, 'text-optional': true,
+      }, paint: { 'text-color': '#CFD8DC', 'text-halo-color': '#00121a', 'text-halo-width': 1.2 }});
 
       setMapReady(true);
     });
@@ -1255,7 +1301,7 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
     if (activeLayers.ship_fishing) enabled.push('fishing');
     if (activeLayers.ship_military) enabled.push('military');
     const filter = ['in', ['get', 'type'], ['literal', enabled]] as any;
-    for (const id of ['ship-dots', 'ship-label']) {
+    for (const id of ['ship-dots', 'ship-vessels', 'ship-label']) {
       if (map.getLayer(id)) map.setFilter(id, filter);
     }
   }, [mapReady, activeLayers.ship_cargo, activeLayers.ship_tanker, activeLayers.ship_passenger, activeLayers.ship_fishing, activeLayers.ship_military]);
