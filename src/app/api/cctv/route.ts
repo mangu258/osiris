@@ -532,6 +532,40 @@ async function fetchRegionCached(r: string): Promise<any[]> {
   return fresh;
 }
 
+// Fetch regions with bounded concurrency. Firing all ~29 regions at once
+// saturates Node's outbound socket pool, so multi-endpoint regions (Caltrans →
+// 9 CA DOT districts, Canada, Europe) have their upstream fetches time out and
+// return empty — which is why LA/San Diego dropped out of a cold region=all
+// even though each loads fine on its own. A small pool keeps every region healthy.
+async function fetchRegionsPooled(regions: string[], concurrency: number): Promise<any[][]> {
+  const out: any[][] = new Array(regions.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < regions.length) {
+      const i = next++;
+      try { out[i] = await fetchRegionCached(regions[i]); } catch { out[i] = []; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, regions.length) }, worker));
+  return out;
+}
+
+// Warm every region's last-good cache in the background at boot, and refresh it
+// periodically. Fetched a few at a time (no user waiting, no socket-pool
+// stampede) so even slow regions like Caltrans succeed and get cached. This is
+// what lets a cold user-facing region=all return LA/San Diego/etc. immediately
+// instead of dropping the regions that can't finish under the concurrent load.
+let warming = false;
+async function warmAllRegions() {
+  if (warming) return;
+  warming = true;
+  try { await fetchRegionsPooled(Object.keys(REGION_FETCHERS), 4); }
+  catch { /* best effort */ }
+  finally { warming = false; }
+}
+warmAllRegions();
+setInterval(warmAllRegions, 10 * 60 * 1000);
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -553,19 +587,17 @@ export async function GET(request: Request) {
       regionsToFetch = Object.keys(REGION_FETCHERS);
     }
 
-    const results = await Promise.allSettled(
-      regionsToFetch.map(r => fetchRegionCached(r))
-    );
+    // Bounded concurrency so a big region=all doesn't collapse the socket pool
+    // and silently drop slow regions (Caltrans/LA/San Diego, Canada, Europe).
+    const perRegion = await fetchRegionsPooled(regionsToFetch, 6);
 
     const allCameras: any[] = [];
     const sources: Record<string, number> = {};
 
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        for (const cam of result.value) {
-          allCameras.push(cam);
-          sources[cam.source] = (sources[cam.source] || 0) + 1;
-        }
+    for (const cams of perRegion) {
+      for (const cam of (cams || [])) {
+        allCameras.push(cam);
+        sources[cam.source] = (sources[cam.source] || 0) + 1;
       }
     }
 

@@ -400,6 +400,10 @@ export default function Dashboard() {
     if (activeLayers.cctv && !layerFetchedRef.current.has('cctv')) {
       fetchEndpoint(`/api/cctv?region=all&_t=${Date.now()}`);
       layerFetchedRef.current.add('cctv');
+      // Backfill once ~35s later: right after a deploy the server cache is cold,
+      // and slow regions (Caltrans → LA/San Diego) can drop out of the first
+      // region=all. By 35s the server has warmed, so this refetch fills them in.
+      setTimeout(() => fetchEndpoint(`/api/cctv?region=all&_t=${Date.now()}`), 35000);
     }
     // Maritime
     if (activeLayers.maritime && !layerFetchedRef.current.has('maritime')) {
