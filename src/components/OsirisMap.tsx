@@ -604,17 +604,21 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
       createShipIcon(map, 'ship-hsc', '#FFD54F');
       createShipIcon(map, 'ship-other', '#B0BEC5');
 
-      // Far zoom: tiny luminous dots so a dense field reads as thousands of vessels.
-      map.addLayer({ id: 'ship-dots', type: 'circle', source: 'maritime-ships', maxzoom: 6, paint: {
-        'circle-radius': ['interpolate',['linear'],['zoom'], 1,1, 4,1.8, 6,3],
+      // Far/regional zoom: cheap GPU dots. These carry the whole-globe view so the
+      // expensive rotated-symbol layer never draws thousands of icons at once.
+      // maxzoom hands off to ship-vessels with no overlapping double-draw.
+      map.addLayer({ id: 'ship-dots', type: 'circle', source: 'maritime-ships', maxzoom: 6.5, paint: {
+        'circle-radius': ['interpolate',['linear'],['zoom'], 1,1, 4,1.8, 6.5,3.2],
         'circle-color': shipColor,
-        'circle-opacity': ['interpolate',['linear'],['zoom'], 1,0.75, 6,0.95],
+        'circle-opacity': ['interpolate',['linear'],['zoom'], 1,0.75, 6.5,0.95],
         'circle-blur': 0.25,
       }});
-      // Closer: directional hulls rotated to each ship's heading — a live AIS plot.
-      map.addLayer({ id: 'ship-vessels', type: 'symbol', source: 'maritime-ships', minzoom: 5.5, layout: {
+      // Zoomed in (>= 6.5, so the viewport holds few vessels): directional hulls
+      // rotated to heading — a live AIS plot. Bounded viewport count keeps it smooth
+      // even with allow-overlap (which skips per-symbol collision cost).
+      map.addLayer({ id: 'ship-vessels', type: 'symbol', source: 'maritime-ships', minzoom: 6.5, layout: {
         'icon-image': shipIcon,
-        'icon-size': ['interpolate',['linear'],['zoom'], 5.5,0.45, 9,0.8, 13,1.2],
+        'icon-size': ['interpolate',['linear'],['zoom'], 6.5,0.5, 9,0.8, 13,1.2],
         'icon-rotate': ['coalesce', ['get','heading'], 0],
         'icon-rotation-alignment': 'map',
         'icon-allow-overlap': true,
