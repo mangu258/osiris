@@ -4,14 +4,6 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Loader2, RefreshCw, X } from 'lucide-react';
 
-/**
- * OSIRIS — One-Click AI Overview
- * Drop-in button that generates an intelligence read-out for whatever
- * data payload it's handed. Posts to /api/ai/overview which works with
- * or without a Gemini key (heuristic analyst fallback), so it always
- * returns something useful. Anyone can click it.
- */
-
 interface AiOverviewProps {
   mode: 'alerts' | 'markets';
   payload: any;
@@ -43,7 +35,7 @@ export default function AiOverview({ mode, payload, accent = '#7C4DFF' }: AiOver
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setResult(await res.json());
     } catch (e: any) {
-      setError(e?.message || 'Failed to generate overview');
+      setError(e?.message || '生成概览失败');
     } finally {
       setLoading(false);
     }
@@ -67,7 +59,7 @@ export default function AiOverview({ mode, payload, accent = '#7C4DFF' }: AiOver
         }}
       >
         {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-        {loading ? 'ANALYZING…' : 'AI OVERVIEW'}
+        {loading ? '分析中…' : 'AI 概览'}
       </button>
 
       <AnimatePresence>
@@ -83,16 +75,15 @@ export default function AiOverview({ mode, payload, accent = '#7C4DFF' }: AiOver
               className="mt-2 p-2.5 rounded-lg border text-[10px] leading-relaxed"
               style={{ borderColor: `${accent}33`, background: `${accent}08` }}
             >
-              {/* Header row */}
               <div className="flex items-center justify-between mb-1.5">
                 <span className="font-mono tracking-widest text-[8px]" style={{ color: accent }}>
-                  {result ? `OSIRIS ${result.generatedBy === 'gemini' ? 'AI' : 'ANALYST'}` : 'OSIRIS ANALYST'}
+                  {result ? `奥西里斯 ${result.generatedBy === 'gemini' ? 'AI' : '分析师'}` : '奥西里斯 分析师'}
                 </span>
                 <div className="flex items-center gap-2">
-                  <button onClick={generate} disabled={loading} className="hover:opacity-70 transition-opacity" title="Regenerate">
+                  <button onClick={generate} disabled={loading} className="hover:opacity-70 transition-opacity" title="重新生成">
                     <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} style={{ color: accent }} />
                   </button>
-                  <button onClick={() => setOpen(false)} className="hover:opacity-70 transition-opacity" title="Close">
+                  <button onClick={() => setOpen(false)} className="hover:opacity-70 transition-opacity" title="关闭">
                     <X className="w-3 h-3 text-[var(--text-muted)]" />
                   </button>
                 </div>
@@ -100,7 +91,7 @@ export default function AiOverview({ mode, payload, accent = '#7C4DFF' }: AiOver
 
               {loading && !result && (
                 <div className="flex items-center gap-2 py-2 text-[var(--text-muted)]">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Reading the feed…
+                  <Loader2 className="w-3 h-3 animate-spin" /> 正在读取情报源…
                 </div>
               )}
 
@@ -125,8 +116,8 @@ export default function AiOverview({ mode, payload, accent = '#7C4DFF' }: AiOver
                   )}
 
                   <div className="mt-2 text-[7px] font-mono text-[var(--text-muted)] tracking-wide">
-                    {result.generatedBy === 'gemini' ? 'GEMINI 2.0 FLASH' : 'HEURISTIC ANALYST'} ·{' '}
-                    {new Date(result.generatedAt).toLocaleTimeString()}
+                    {result.generatedBy === 'gemini' ? 'GEMINI 2.0 FLASH' : '启发式分析师'} ·{' '}
+                    {new Date(result.generatedAt).toLocaleTimeString('zh-CN')}
                   </div>
                 </>
               )}
