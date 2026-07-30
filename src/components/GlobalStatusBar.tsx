@@ -130,11 +130,7 @@ export default function GlobalStatusBar() {
     return () => clearInterval(iv);
   }, []);
 
-  // Keep the bar mounted even with no feed data — the left-hand community and
-  // docs links must stay reachable when CoinGecko/USGS are rate-limited or down.
   const hasTicker = crypto.length > 0 || quakes.length > 0;
-
-  const solPrice = crypto.find(c => c.symbol === 'SOL');
 
   return (
     <motion.div
@@ -144,38 +140,31 @@ export default function GlobalStatusBar() {
       className="hidden md:block absolute bottom-0 left-0 right-0 z-[210] pointer-events-none"
     >
       <div className="h-[28px] overflow-hidden bg-[#0a0a0f]/95 border-t border-white/[0.06] flex items-center text-[9px] font-mono tracking-wider backdrop-blur-xl relative">
-        {/* Animated scan line */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--cyan-primary)]/30 to-transparent" style={{ animation: 'hud-scanline 4s linear infinite' }} />
         
-        {/* ── LEFT: Social & Community Links ── */}
         <div className="flex-shrink-0 h-full flex items-center pointer-events-auto">
-          {/* Discord — highlighted */}
           <a href="https://discord.gg/EPaFD5FFKf" target="_blank" rel="noopener noreferrer"
             className="h-full px-3 flex items-center gap-1.5 bg-[#5865F2]/10 hover:bg-[#5865F2]/25 border-r border-white/[0.04] transition-all duration-200 group"
           >
             <DiscordIcon />
           </a>
-          {/* X / Twitter */}
           <a href="https://x.com/soulsimplifai" target="_blank" rel="noopener noreferrer"
             className="h-full px-2.5 flex items-center gap-1.5 text-white/40 hover:text-white hover:bg-white/[0.04] border-r border-white/[0.04] transition-all duration-200"
           >
             <XIcon />
           </a>
-          {/* Documentation & API reference */}
-          <Link href="/docs" prefetch title="Documentation & API Reference" aria-label="Documentation & API Reference"
+          <Link href="/docs" prefetch title="文档与API参考" aria-label="文档与API参考"
             className="h-full px-3 flex items-center gap-1.5 bg-[var(--gold-primary)]/10 text-[var(--gold-primary)]/80 hover:text-[var(--gold-primary)] hover:bg-[var(--gold-primary)]/25 border-r border-white/[0.04] transition-all duration-200"
           >
             <DocsIcon />
-            <span className="text-[8px] font-bold tracking-[0.15em] uppercase">Docs</span>
+            <span className="text-[8px] font-bold tracking-[0.15em] uppercase">文档</span>
           </Link>
         </div>
 
-        {/* ── CENTER: Scrolling ticker ── */}
         <div className="flex-1 overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 3%, black 97%, transparent)' }}>
           <div className={`flex items-center animate-ticker whitespace-nowrap ${hasTicker ? '' : 'hidden'}`}>
             {[...Array(4)].map((_, repeatIdx) => (
               <span key={repeatIdx} className="inline-flex items-center">
-                {/* Crypto prices */}
                 {crypto.map(c => (
                   <span key={`${c.symbol}-${repeatIdx}`} className="inline-flex items-center gap-1 mx-3">
                     {c.symbol === 'BTC' && <BtcIcon />}
@@ -185,9 +174,7 @@ export default function GlobalStatusBar() {
                     {formatChange(c.change24h)}
                   </span>
                 ))}
-                {/* Separator */}
                 <span className="text-white/10 mx-2">│</span>
-                {/* Earthquakes */}
                 {quakes.map(quake => (
                   <span 
                     key={`${quake.id}-${repeatIdx}`}
@@ -206,32 +193,28 @@ export default function GlobalStatusBar() {
           </div>
         </div>
 
-        {/* ── RIGHT: Live SOL Price + Links ── */}
         <div className="flex-shrink-0 h-full flex items-center pointer-events-auto border-l border-white/[0.04]">
-
-          {/* Status indicator */}
           <div className="h-full px-3 flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-[#00E676] animate-pulse" />
-            <span className="text-[#00E676]/70 text-[7px] tracking-[0.2em]">ONLINE</span>
+            <span className="text-[#00E676]/70 text-[7px] tracking-[0.2em]">在线</span>
           </div>
         </div>
       </div>
 
-      {/* Earthquake hover tooltip */}
       {hoveredQuake && (
         <div className="absolute bottom-[34px] left-1/2 -translate-x-1/2 z-[300] pointer-events-none">
           <div className="bg-black/90 backdrop-blur-xl border border-white/[0.08] rounded-lg px-4 py-3 text-[10px] font-mono whitespace-nowrap shadow-2xl">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[12px]">🔴</span>
-              <span className="font-bold text-[#FF5722]">Magnitude {hoveredQuake.magnitude.toFixed(1)}</span>
+              <span className="font-bold text-[#FF5722]">震级 {hoveredQuake.magnitude.toFixed(1)}</span>
               <span className="text-white/30 text-[8px] bg-white/5 px-1.5 py-0.5 rounded">USGS</span>
             </div>
             <div className="text-[11px] text-white font-bold mb-2">
               {hoveredQuake.place}
             </div>
             <div className="flex flex-col gap-1 text-[9px]">
-              <div className="text-white/50"><span className="text-white/30">Depth:</span> {hoveredQuake.depth} km</div>
-              <div className="text-white/50 mt-1"><span className="text-white/30">Time:</span> {new Date(hoveredQuake.time).toLocaleString()}</div>
+              <div className="text-white/50"><span className="text-white/30">深度:</span> {hoveredQuake.depth} km</div>
+              <div className="text-white/50 mt-1"><span className="text-white/30">时间:</span> {new Date(hoveredQuake.time).toLocaleString('zh-CN')}</div>
             </div>
           </div>
         </div>
