@@ -11,8 +11,6 @@ import {
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 
-// ── TYPES ──
-
 interface EntityNode {
   id: string;
   label: string;
@@ -29,8 +27,6 @@ interface EntityLink {
 
 interface GraphData { nodes: EntityNode[]; links: EntityLink[]; }
 
-// ── PALETTE ──
-
 const TYPE_COLORS: Record<string, string> = {
   aircraft: '#00E5FF', vessel: '#00BCD4', company: '#D4AF37',
   person: '#B388FF', country: '#76FF03', event: '#FF9500', sanction: '#FF1744',
@@ -43,7 +39,11 @@ const TYPE_ICONS: Record<string, typeof Plane> = {
   ip: Wifi,
 };
 
-// ── PROPS ──
+const TYPE_LABELS: Record<string, string> = {
+  aircraft: '飞机', vessel: '船舶', company: '公司',
+  person: '人物', country: '国家', event: '事件', sanction: '制裁',
+  ip: 'IP',
+};
 
 interface Props {
   entity: { type: string; id: string; label?: string; properties?: Record<string, any> } | null;
@@ -85,7 +85,6 @@ function EntityGraphPanel({ entity, onClose }: Props) {
     setLoading(true); setError(null);
     try {
       const params = new URLSearchParams({ type, id });
-      // Forward extra properties for aircraft/vessel resolution
       if (properties?.registration) params.set('registration', properties.registration);
       if (properties?.model) params.set('model', properties.model);
       if (properties?.icao24) params.set('icao24', properties.icao24);
@@ -94,7 +93,7 @@ function EntityGraphPanel({ entity, onClose }: Props) {
       const data = await res.json();
       setGraphData(prev => mergeGraph(prev, { nodes: data.nodes || [], links: data.links || [] }));
       setExpandedIds(prev => new Set([...prev, key]));
-    } catch (e) { setError(e instanceof Error ? e.message : 'Expansion failed'); }
+    } catch (e) { setError(e instanceof Error ? e.message : '扩展失败'); }
     finally { setLoading(false); }
   }, [expandedIds, mergeGraph]);
 
@@ -124,7 +123,6 @@ function EntityGraphPanel({ entity, onClose }: Props) {
     const color = TYPE_COLORS[n.type] || '#888';
     const size = isSelected ? 5 : 3.5;
     
-    // Clean, precise circle
     ctx.beginPath();
     ctx.arc(n.x!, n.y!, size, 0, 2 * Math.PI);
     ctx.fillStyle = color;
@@ -133,35 +131,27 @@ function EntityGraphPanel({ entity, onClose }: Props) {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Subtle target bracket for selected node (static, no pulsing)
     if (isSelected) {
       const bSize = size + 4;
       const bLen = 3;
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      // TL
       ctx.moveTo(n.x! - bSize, n.y! - bSize + bLen); ctx.lineTo(n.x! - bSize, n.y! - bSize); ctx.lineTo(n.x! - bSize + bLen, n.y! - bSize);
-      // TR
       ctx.moveTo(n.x! + bSize - bLen, n.y! - bSize); ctx.lineTo(n.x! + bSize, n.y! - bSize); ctx.lineTo(n.x! + bSize, n.y! - bSize + bLen);
-      // BL
       ctx.moveTo(n.x! - bSize, n.y! + bSize - bLen); ctx.lineTo(n.x! - bSize, n.y! + bSize); ctx.lineTo(n.x! - bSize + bLen, n.y! + bSize);
-      // BR
       ctx.moveTo(n.x! + bSize - bLen, n.y! + bSize); ctx.lineTo(n.x! + bSize, n.y! + bSize); ctx.lineTo(n.x! + bSize, n.y! + bSize - bLen);
       ctx.stroke();
       
-      // Faint outer ring
       ctx.beginPath(); ctx.arc(n.x!, n.y!, bSize + 2, 0, 2*Math.PI);
       ctx.strokeStyle = `${color}30`; ctx.lineWidth = 1; ctx.stroke();
     }
 
-    // Clean label rendering
     const fontSize = Math.max(10 / globalScale, 3);
     if (fontSize > 3.5 || isSelected) {
       ctx.font = `${isSelected ? 'bold ' : ''}${fontSize}px 'JetBrains Mono', monospace`;
       ctx.fillStyle = isSelected ? '#fff' : `${color}cc`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      // Black background for text readability
       const label = n.label.length > 22 ? n.label.slice(0, 20) + '…' : n.label;
       const textWidth = ctx.measureText(label).width;
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -175,8 +165,7 @@ function EntityGraphPanel({ entity, onClose }: Props) {
     const { source: s, target: t } = link;
     if (!s.x || !t.x) return;
     ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(t.x, t.y);
-    // Smooth, thin, non-dashed lines
-    ctx.strokeStyle = 'rgba(212,175,55,0.15)'; // faint gold
+    ctx.strokeStyle = 'rgba(212,175,55,0.15)';
     ctx.lineWidth = Math.max(0.5, 1 / globalScale); 
     ctx.stroke();
     
@@ -187,8 +176,6 @@ function EntityGraphPanel({ entity, onClose }: Props) {
       ctx.textAlign = 'center'; ctx.fillText(link.label || '', (s.x + t.x) / 2, (s.y + t.y) / 2);
     }
   }, []);
-
-  // Removed early return to allow rendering empty panel
 
   return (
     <AnimatePresence>
@@ -233,11 +220,11 @@ function EntityGraphPanel({ entity, onClose }: Props) {
         <div className="hud-corner hud-tr" />
         <div className="hud-corner hud-bl" />
         <div className="hud-corner hud-br" />
-        {/* HEADER */}
+
         <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--border-primary)] bg-[var(--gold-primary)]/5 relative z-20">
           <div className="flex items-center gap-3">
             <div className="w-1.5 h-1.5 bg-[var(--gold-primary)] animate-osiris-pulse shadow-[0_0_8px_var(--gold-primary)]" />
-            <span className="text-[12px] font-mono font-bold tracking-[0.2em] text-[var(--gold-primary)]">[ OSIRIS // ENTITY INTEL ]</span>
+            <span className="text-[12px] font-mono font-bold tracking-[0.2em] text-[var(--gold-primary)]">[ 奥西里斯 // 实体情报 ]</span>
             {loading && <Loader2 className="w-3.5 h-3.5 text-[var(--gold-primary)] animate-spin" />}
           </div>
           <div className="flex items-center gap-2">
@@ -250,29 +237,26 @@ function EntityGraphPanel({ entity, onClose }: Props) {
           </div>
         </div>
 
-        {/* ROOT LABEL */}
         {entity ? (
           <div className="px-6 py-2 border-b border-[var(--border-primary)] flex items-center gap-3 bg-black/20 relative z-20">
             {(() => { const I = TYPE_ICONS[entity.type] || Globe; return <I className="w-4 h-4" style={{ color: TYPE_COLORS[entity.type] }} />; })()}
             <span className="text-xs font-mono text-white/90 tracking-widest uppercase truncate">{entity.label || entity.id}</span>
-            <span className="text-[10px] font-mono text-[var(--gold-primary)]/70 ml-auto tracking-widest">{graphData.nodes.length} NODES // {graphData.links.length} LINKS</span>
+            <span className="text-[10px] font-mono text-[var(--gold-primary)]/70 ml-auto tracking-widest">{graphData.nodes.length} 节点 // {graphData.links.length} 关系</span>
           </div>
         ) : (
           <div className="px-6 py-3 border-b border-[var(--border-primary)] flex items-center gap-3 bg-black/20 relative z-20">
             <Network className="w-4 h-4 text-[var(--gold-primary)]/50 animate-osiris-pulse" />
-            <span className="text-xs font-mono text-[var(--gold-primary)]/50 tracking-widest uppercase truncate typewriter">[ AWAITING TARGET LOCK ]</span>
+            <span className="text-xs font-mono text-[var(--gold-primary)]/50 tracking-widest uppercase truncate typewriter">[ 等待锁定目标 ]</span>
           </div>
         )}
 
-        {/* ERROR */}
         {error && (
           <div className="px-6 py-2 bg-[#FF1744]/10 border-b border-[#FF1744]/30 flex items-center gap-2 relative z-20 shadow-[inset_0_0_15px_rgba(255,23,68,0.2)]">
             <AlertTriangle className="w-3.5 h-3.5 text-[#FF1744]" />
-            <span className="text-[10px] font-mono font-bold tracking-widest text-[#FF1744] uppercase">[ ERR: {error} ]</span>
+            <span className="text-[10px] font-mono font-bold tracking-widest text-[#FF1744] uppercase">[ 错误: {error} ]</span>
           </div>
         )}
 
-        {/* GRAPH */}
         <div ref={containerRef} className="flex-1 relative overflow-hidden" style={{ minHeight: 300 }}>
           {graphData.nodes.length > 0 && (
               <ForceGraph2D
@@ -289,12 +273,11 @@ function EntityGraphPanel({ entity, onClose }: Props) {
           )}
           {graphData.nodes.length === 0 && !loading && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-mono text-white/30">No graph data yet</span>
+              <span className="text-xs font-mono text-white/30">暂无图谱数据</span>
             </div>
           )}
         </div>
 
-        {/* SELECTED NODE */}
         <AnimatePresence>
           {selectedNode && (
             <motion.div initial={{ y: 20, opacity: 0, filter: 'blur(10px)' }} animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }} exit={{ y: 20, opacity: 0, filter: 'blur(10px)' }}
@@ -309,7 +292,7 @@ function EntityGraphPanel({ entity, onClose }: Props) {
                 </div>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 border"
                   style={{ color: TYPE_COLORS[selectedNode.type], borderColor: `${TYPE_COLORS[selectedNode.type]}80`, background: `${TYPE_COLORS[selectedNode.type]}15`, textShadow: `0 0 5px ${TYPE_COLORS[selectedNode.type]}` }}>
-                  [{selectedNode.type.toUpperCase()}]
+                  [{TYPE_LABELS[selectedNode.type] || selectedNode.type.toUpperCase()}]
                 </span>
               </div>
               {selectedNode.properties && Object.keys(selectedNode.properties).length > 0 && (
@@ -320,7 +303,7 @@ function EntityGraphPanel({ entity, onClose }: Props) {
                       <div className="text-[11px] font-mono text-white/90 truncate flex items-center gap-1 mt-0.5">
                         <span className="w-1 h-1 bg-[var(--gold-primary)]/40 inline-block" />
                         <span className="typewriter" style={{ animationDelay: `${i * 0.1}s` }}>
-                          {typeof v === 'boolean' ? (v ? 'YES' : 'NO') : String(v || '—')}
+                          {typeof v === 'boolean' ? (v ? '是' : '否') : String(v || '—')}
                         </span>
                       </div>
                     </div>
@@ -333,19 +316,18 @@ function EntityGraphPanel({ entity, onClose }: Props) {
                   expandEntity(selectedNode.type, rawId);
                 }} className="btn-tactical w-full mt-4 flex items-center justify-center gap-2" disabled={loading}>
                   {loading ? <Loader2 className="w-3.5 h-3.5 text-[var(--gold-primary)] animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 text-[var(--gold-primary)]" />}
-                  <span className="text-[11px] font-mono font-bold text-[var(--gold-primary)] tracking-[0.2em]">[ ACQUIRE TARGET DATA ]</span>
+                  <span className="text-[11px] font-mono font-bold text-[var(--gold-primary)] tracking-[0.2em]">[ 获取目标数据 ]</span>
                 </button>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* LEGEND */}
         <div className="px-4 py-2 border-t border-white/5 flex items-center gap-3 flex-wrap">
           {Object.entries(TYPE_COLORS).map(([t, c]) => (
             <div key={t} className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full" style={{ background: c }} />
-              <span className="text-[8px] font-mono text-white/40 uppercase">{t}</span>
+              <span className="text-[8px] font-mono text-white/40 uppercase">{TYPE_LABELS[t] || t}</span>
             </div>
           ))}
         </div>
