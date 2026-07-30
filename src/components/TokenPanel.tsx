@@ -27,19 +27,16 @@ export default function TokenPanel() {
             className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-auto px-4"
             onClick={() => setIsOpen(false)}
           >
-            {/* Backdrop */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-            {/* Modal */}
             <div 
               className="relative w-full max-w-4xl bg-[#0A0A0A] border border-[var(--border-primary)] shadow-2xl flex flex-col"
               onClick={e => e.stopPropagation()}
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-primary)] bg-black/40">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-4 h-4 text-[#14F195]" />
-                  <h2 className="text-xs font-mono font-bold text-white tracking-widest uppercase">$OSIRIS LIVE CHART</h2>
+                  <h2 className="text-xs font-mono font-bold text-white tracking-widest uppercase">$OSIRIS 实时行情</h2>
                 </div>
                 <button 
                   onClick={() => setIsOpen(false)}
@@ -49,7 +46,6 @@ export default function TokenPanel() {
                 </button>
               </div>
 
-              {/* Chart Body */}
               <div className="p-1 relative w-full" style={{ height: '70vh', minHeight: '500px' }}>
                 <iframe 
                   src="https://dexscreener.com/solana/G3rchnZ2WLsBDZSrVME4fTyzFP57F3yvvqWMxAy2b4ce?embed=1&loadChartSettings=0&chartLeftToolbar=0&chartTheme=dark&theme=dark&chartStyle=0&chartType=usd&interval=15"
