@@ -22,14 +22,13 @@ export default function SharePanel({ mapView, activeLayers, mouseCoords }: Share
     params.set('lon', lng.toFixed(4));
     params.set('zoom', mapView.zoom.toFixed(2));
 
-    // Encode active layers as compact string
     const layerKeys = Object.entries(activeLayers)
       .filter(([, v]) => v)
       .map(([k]) => k)
       .join(',');
     if (layerKeys) params.set('layers', layerKeys);
 
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://osiris.vercel.app';
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://prince-osiris.vercel.app';
     return `${base}/?${params.toString()}`;
   }, [mapView, activeLayers, mouseCoords]);
 
@@ -40,7 +39,6 @@ export default function SharePanel({ mapView, activeLayers, mouseCoords }: Share
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       const input = document.createElement('input');
       input.value = url;
       document.body.appendChild(input);
@@ -52,7 +50,6 @@ export default function SharePanel({ mapView, activeLayers, mouseCoords }: Share
     }
   }, [generateShareUrl]);
 
-  // Keyboard shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 's' && !e.ctrlKey && !e.metaKey && !['INPUT', 'TEXTAREA'].includes((e.target as Element)?.tagName)) {
@@ -65,18 +62,16 @@ export default function SharePanel({ mapView, activeLayers, mouseCoords }: Share
 
   return (
     <>
-      {/* Share Button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         className="glass-panel w-8 h-8 flex items-center justify-center pointer-events-auto hover:border-[var(--gold-primary)] transition-colors"
-        title="Share view (S)"
+        title="分享视图 (S)"
       >
         <Share2 className="w-3.5 h-3.5 text-[var(--gold-primary)]" />
       </motion.button>
 
-      {/* Share Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -88,32 +83,30 @@ export default function SharePanel({ mapView, activeLayers, mouseCoords }: Share
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Globe className="w-3.5 h-3.5 text-[var(--gold-primary)]" />
-                <span className="hud-text text-[10px] text-[var(--text-primary)]">SHARE VIEW</span>
+                <span className="hud-text text-[10px] text-[var(--text-primary)]">分享视图</span>
               </div>
               <button onClick={() => setIsOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                 <X className="w-3 h-3" />
               </button>
             </div>
 
-            {/* Current View Info */}
             <div className="mb-3 p-2 rounded-lg bg-[var(--bg-void)] border border-[var(--border-primary)]">
               <div className="flex items-center gap-1.5 mb-1">
                 <MapPin className="w-2.5 h-2.5 text-[var(--gold-primary)]" />
-                <span className="text-[7px] font-mono text-[var(--text-muted)] tracking-widest">CURRENT VIEW</span>
+                <span className="text-[7px] font-mono text-[var(--text-muted)] tracking-widest">当前视图</span>
               </div>
               <div className="text-[8px] font-mono text-[var(--text-secondary)]">
-                {mouseCoords ? `${mouseCoords.lat.toFixed(4)}°, ${mouseCoords.lng.toFixed(4)}°` : '—'} · Zoom {mapView.zoom.toFixed(1)}
+                {mouseCoords ? `${mouseCoords.lat.toFixed(4)}°, ${mouseCoords.lng.toFixed(4)}°` : '—'} · 缩放 {mapView.zoom.toFixed(1)}
               </div>
               <div className="text-[7px] font-mono text-[var(--text-muted)] mt-1">
-                {Object.values(activeLayers).filter(Boolean).length} layers active
+                {Object.values(activeLayers).filter(Boolean).length} 个图层已启用
               </div>
             </div>
 
-            {/* Share URL */}
             <div className="mb-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <Link2 className="w-2.5 h-2.5 text-[var(--text-muted)]" />
-                <span className="text-[7px] font-mono text-[var(--text-muted)] tracking-widest">SHAREABLE LINK</span>
+                <span className="text-[7px] font-mono text-[var(--text-muted)] tracking-widest">分享链接</span>
               </div>
               <div className="flex gap-1.5">
                 <div className="flex-1 p-1.5 rounded bg-[var(--bg-void)] border border-[var(--border-primary)] text-[7px] font-mono text-[var(--gold-primary)] truncate">
@@ -128,33 +121,32 @@ export default function SharePanel({ mapView, activeLayers, mouseCoords }: Share
               </div>
             </div>
 
-            {/* Quick Share */}
             <div className="flex gap-2">
               <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('🏛️ OSIRIS — Global Intelligence Dashboard')}&url=${encodeURIComponent(generateShareUrl())}`}
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('🏛️ 奥西里斯 — 全球情报仪表盘')}&url=${encodeURIComponent(generateShareUrl())}`}
                 target="_blank"
                 className="flex-1 text-center py-1.5 rounded text-[7px] font-mono tracking-wider text-[var(--text-muted)] border border-[var(--border-primary)] hover:border-[#1DA1F2] hover:text-[#1DA1F2] transition-colors"
               >
-                𝕏 POST
+                𝕏 发布
               </a>
               <a
                 href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(generateShareUrl())}`}
                 target="_blank"
                 className="flex-1 text-center py-1.5 rounded text-[7px] font-mono tracking-wider text-[var(--text-muted)] border border-[var(--border-primary)] hover:border-[#0A66C2] hover:text-[#0A66C2] transition-colors"
               >
-                IN SHARE
+                LinkedIn
               </a>
               <a
-                href={`https://reddit.com/submit?url=${encodeURIComponent(generateShareUrl())}&title=${encodeURIComponent('OSIRIS — Open Source Global Intelligence Platform')}`}
+                href={`https://reddit.com/submit?url=${encodeURIComponent(generateShareUrl())}&title=${encodeURIComponent('奥西里斯 — 开源全球情报平台')}`}
                 target="_blank"
                 className="flex-1 text-center py-1.5 rounded text-[7px] font-mono tracking-wider text-[var(--text-muted)] border border-[var(--border-primary)] hover:border-[#FF4500] hover:text-[#FF4500] transition-colors"
               >
-                REDDIT
+                Reddit
               </a>
             </div>
 
             <div className="mt-3 text-center text-[6px] font-mono text-[var(--text-muted)] tracking-widest">
-              PRESS [S] TO TOGGLE · SHAREABLE LINKS PRESERVE VIEW STATE
+              按 [S] 切换 · 分享链接会保留当前视图状态
             </div>
           </motion.div>
         )}
