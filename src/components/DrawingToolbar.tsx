@@ -26,9 +26,8 @@ interface DrawingToolbarProps {
   onRenamePolygon: (id: string, name: string) => void;
 }
 
-/** Calculate area of a GeoJSON polygon in km² using the Shoelace formula on a spheroid */
 export function calculatePolygonArea(coords: number[][]): number {
-  const R = 6371; // Earth radius in km
+  const R = 6371;
   let area = 0;
   const n = coords.length;
   for (let i = 0; i < n; i++) {
@@ -42,7 +41,6 @@ export function calculatePolygonArea(coords: number[][]): number {
   return area;
 }
 
-/** Calculate perimeter of a polygon in km using Haversine */
 export function calculatePerimeter(coords: number[][]): number {
   const R = 6371;
   let perimeter = 0;
@@ -69,11 +67,11 @@ export function getNextColor(existing: DrawnPolygon[]): string {
 function formatRelativeTime(ms: number) {
   const diff = Date.now() - ms;
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return '刚刚';
+  if (mins < 60) return `${mins}分钟前`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return `${hours}小时前`;
+  return `${Math.floor(hours / 24)}天前`;
 }
 
 export default function DrawingToolbar({
@@ -89,13 +87,11 @@ export default function DrawingToolbar({
   const prevCount = useRef(polygons.length);
   const [, setTick] = useState(0);
 
-  // Update relative times every minute
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Flash confirmation when a new polygon is added
   useEffect(() => {
     if (polygons.length > prevCount.current) {
       setFlash(true);
@@ -136,27 +132,25 @@ export default function DrawingToolbar({
           borderColor: flash ? 'var(--alert-green, #00E676)' : 'rgba(255, 255, 255, 0.06)'
         }}
       >
-        {/* Header */}
         <div className="px-4 py-3 border-b border-white/[0.06]">
           <div className="flex items-center gap-2 mb-2">
             <Pentagon className="w-3.5 h-3.5 text-[var(--cyan-primary)]" />
-            <span className="text-[10px] font-mono tracking-[0.2em] text-white/90 font-bold">DRAWING TOOLS</span>
+            <span className="text-[10px] font-mono tracking-[0.2em] text-white/90 font-bold">绘图工具</span>
           </div>
           
           <div className="flex items-center justify-between text-[8px] font-mono text-white/50 bg-white/5 rounded px-2 py-1.5 border border-white/[0.04]">
             <div className="flex flex-col">
-              <span className="text-[7px] tracking-wider mb-0.5 uppercase">Tracked Area</span>
+              <span className="text-[7px] tracking-wider mb-0.5 uppercase">追踪面积</span>
               <span className="text-[10px] text-[var(--cyan-primary)] font-bold">{totalArea.toFixed(1)} km²</span>
             </div>
             <div className="w-[1px] h-6 bg-white/10" />
             <div className="flex flex-col text-right">
-              <span className="text-[7px] tracking-wider mb-0.5 uppercase">AOIs / Perim</span>
+              <span className="text-[7px] tracking-wider mb-0.5 uppercase">兴趣区 / 周长</span>
               <span className="text-[10px] text-white/80">{polygons.length} / {totalPerim.toFixed(1)}km</span>
             </div>
           </div>
         </div>
 
-        {/* Draw button */}
         <div className="p-3 border-b border-white/[0.04]">
           <button
             onClick={onToggleDrawing}
@@ -178,24 +172,23 @@ export default function DrawingToolbar({
               {isDrawing ? (
                 <>
                   <div className="w-2 h-2 rounded-full bg-[var(--cyan-primary)] animate-pulse" />
-                  <span className="font-bold">DRAWING...</span>
+                  <span className="font-bold">绘制中...</span>
                 </>
               ) : (
                 <>
                   <Pentagon className="w-3.5 h-3.5" />
-                  DRAW POLYGON
+                  绘制多边形
                 </>
               )}
             </div>
           </button>
           {isDrawing && (
             <p className="text-[8px] font-mono text-white/40 mt-2 text-center tracking-wide">
-              Click map to start · Double-click to finish
+              点击地图开始 · 双击完成
             </p>
           )}
         </div>
 
-        {/* Polygon list */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[280px] styled-scrollbar bg-black/40">
           <AnimatePresence mode="popLayout">
             {polygons.length === 0 && !isDrawing ? (
@@ -206,7 +199,7 @@ export default function DrawingToolbar({
                 className="py-8 px-4 text-center"
               >
                 <Pentagon className="w-6 h-6 text-white/10 mx-auto mb-2" />
-                <p className="text-[9px] font-mono text-white/30 tracking-wider">No polygons drawn yet.</p>
+                <p className="text-[9px] font-mono text-white/30 tracking-wider">尚未绘制多边形。</p>
               </motion.div>
             ) : (
               polygons.map((polygon) => (
@@ -221,7 +214,6 @@ export default function DrawingToolbar({
                   }`}
                   onClick={() => onSelectPolygon(selectedPolygon === polygon.id ? null : polygon.id)}
                 >
-                  {/* Left Color Accent */}
                   <div 
                     className="absolute left-0 top-0 bottom-0 w-[3px] transition-opacity duration-300"
                     style={{ backgroundColor: polygon.color, opacity: selectedPolygon === polygon.id ? 1 : 0.6 }}
@@ -252,10 +244,10 @@ export default function DrawingToolbar({
                     </div>
                     
                     <div className="flex items-center gap-1 flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); handleCopy(polygon); }} className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition" title="Copy GeoJSON">
+                      <button onClick={(e) => { e.stopPropagation(); handleCopy(polygon); }} className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition" title="复制 GeoJSON">
                         {copied === polygon.id ? <Check className="w-3 h-3 text-[var(--alert-green)]" /> : <Copy className="w-3 h-3" />}
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); onDeletePolygon(polygon.id); }} className="p-1.5 rounded bg-[#FF3D57]/10 hover:bg-[#FF3D57]/20 text-[#FF3D57]/60 hover:text-[#FF3D57] transition" title="Delete">
+                      <button onClick={(e) => { e.stopPropagation(); onDeletePolygon(polygon.id); }} className="p-1.5 rounded bg-[#FF3D57]/10 hover:bg-[#FF3D57]/20 text-[#FF3D57]/60 hover:text-[#FF3D57] transition" title="删除">
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
@@ -279,7 +271,6 @@ export default function DrawingToolbar({
           </AnimatePresence>
         </div>
 
-        {/* Actions */}
         {polygons.length > 0 && (
           <div className="p-3 border-t border-white/[0.04] flex items-center gap-2 bg-black/60">
             <button 
@@ -287,14 +278,14 @@ export default function DrawingToolbar({
               className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded text-[8px] font-mono tracking-[0.2em] bg-[var(--cyan-primary)]/10 border border-[var(--cyan-primary)]/30 text-[var(--cyan-primary)]/80 hover:text-[var(--cyan-primary)] hover:bg-[var(--cyan-primary)]/20 hover:border-[var(--cyan-primary)]/50 transition"
             >
               <Download className="w-3 h-3" />
-              EXPORT GEOJSON
+              导出 GeoJSON
             </button>
             <button 
               onClick={onClearAll} 
               className="flex items-center justify-center gap-1.5 px-3 py-2 rounded text-[8px] font-mono tracking-widest bg-[#FF3D57]/10 border border-[#FF3D57]/20 text-[#FF3D57]/60 hover:text-[#FF3D57] hover:bg-[#FF3D57]/20 transition"
             >
               <Trash2 className="w-3 h-3" />
-              CLEAR
+              清空
             </button>
           </div>
         )}
