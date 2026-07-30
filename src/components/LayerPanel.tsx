@@ -23,87 +23,87 @@ const LAYER_GROUPS = [
     fullLabel: 'OSIRIS SDK',
     icon: Network,
     layers: [
-      { key: 'sdk_sea', label: 'Maritime Lines', dataKey: 'sdk_entities' },
+      { key: 'sdk_sea', label: '海事航线', dataKey: 'sdk_entities' },
     ],
   },
   {
     label: 'AVIATION',
-    fullLabel: 'AVIATION',
+    fullLabel: '航空',
     icon: Plane,
     layers: [
-      { key: 'flights', label: 'Commercial', dataKey: 'commercial_flights' },
-      { key: 'private', label: 'Private', dataKey: 'private_flights' },
-      { key: 'jets', label: 'Private Jets', dataKey: 'private_jets' },
-      { key: 'military', label: 'Military', dataKey: 'military_flights' },
+      { key: 'flights', label: '商业航班', dataKey: 'commercial_flights' },
+      { key: 'private', label: '私人飞机', dataKey: 'private_flights' },
+      { key: 'jets', label: '私人公务机', dataKey: 'private_jets' },
+      { key: 'military', label: '军用飞机', dataKey: 'military_flights' },
     ],
   },
   {
     label: 'MARITIME',
-    fullLabel: 'MARITIME',
+    fullLabel: '海事',
     icon: Ship,
     layers: [
-      { key: 'maritime', label: 'Maritime / Naval', dataKey: 'maritime_ships,maritime_ports,maritime_chokepoints' },
+      { key: 'maritime', label: '海事 / 海军', dataKey: 'maritime_ships,maritime_ports,maritime_chokepoints' },
     ],
   },
   {
     label: 'SPACE',
-    fullLabel: 'SPACE TRACKING',
+    fullLabel: '太空追踪',
     icon: Satellite,
     layers: [
-      { key: 'satellites', label: 'All Satellites', dataKey: 'satellites' },
-      { key: 'sat_comms', label: 'Starlink / Comms', dataKey: 'satellites', catKey: 'comms' },
-      { key: 'sat_military', label: 'Military / Intel', dataKey: 'satellites', catKey: 'military' },
-      { key: 'sat_navigation', label: 'GPS / Navigation', dataKey: 'satellites', catKey: 'navigation' },
-      { key: 'sat_earth', label: 'Earth Observation', dataKey: 'satellites', catKey: 'earth_obs' },
-      { key: 'sat_science', label: 'Stations / Telescopes', dataKey: 'satellites', catKey: 'science' },
+      { key: 'satellites', label: '全部卫星', dataKey: 'satellites' },
+      { key: 'sat_comms', label: '星链 / 通信', dataKey: 'satellites', catKey: 'comms' },
+      { key: 'sat_military', label: '军事 / 情报', dataKey: 'satellites', catKey: 'military' },
+      { key: 'sat_navigation', label: 'GPS / 导航', dataKey: 'satellites', catKey: 'navigation' },
+      { key: 'sat_earth', label: '对地观测', dataKey: 'satellites', catKey: 'earth_obs' },
+      { key: 'sat_science', label: '空间站 / 望远镜', dataKey: 'satellites', catKey: 'science' },
     ],
   },
   {
     label: 'SURVEIL',
-    fullLabel: 'SURVEILLANCE',
+    fullLabel: '监控',
     icon: Camera,
     layers: [
-      { key: 'cctv', label: 'CCTV Cameras', dataKey: 'cameras' },
-      { key: 'live_news', label: 'Live News Feeds', dataKey: 'live_feeds' },
-      { key: 'news_intel', label: 'SIGINT News', dataKey: 'sigint_news' },
+      { key: 'cctv', label: 'CCTV摄像头', dataKey: 'cameras' },
+      { key: 'live_news', label: '直播新闻源', dataKey: 'live_feeds' },
+      { key: 'news_intel', label: 'SIGINT新闻', dataKey: 'sigint_news' },
     ],
   },
   {
     label: 'HAZARD',
-    fullLabel: 'NATURAL HAZARDS',
+    fullLabel: '自然灾害',
     icon: CloudLightning,
     layers: [
-      { key: 'earthquakes', label: 'Earthquakes', dataKey: 'earthquakes' },
-      { key: 'fires', label: 'Active Fires', dataKey: 'fires' },
-      { key: 'weather', label: 'Severe Weather', dataKey: 'weather_events' },
+      { key: 'earthquakes', label: '地震', dataKey: 'earthquakes' },
+      { key: 'fires', label: '活跃火灾', dataKey: 'fires' },
+      { key: 'weather', label: '恶劣天气', dataKey: 'weather_events' },
     ],
   },
   {
     label: 'THREAT',
-    fullLabel: 'THREATS & INTEL',
+    fullLabel: '威胁与情报',
     icon: AlertTriangle,
     layers: [
-      { key: 'infrastructure', label: 'Nuclear Facilities', dataKey: 'infrastructure' },
-      { key: 'global_incidents', label: 'Global Incidents', dataKey: 'gdelt' },
-      { key: 'gps_jamming', label: 'GPS Jamming', dataKey: 'gps_jamming' },
+      { key: 'infrastructure', label: '核设施', dataKey: 'infrastructure' },
+      { key: 'global_incidents', label: '全球事件', dataKey: 'gdelt' },
+      { key: 'gps_jamming', label: 'GPS干扰', dataKey: 'gps_jamming' },
     ],
   },
   {
     label: 'NETWORK',
-    fullLabel: 'NETWORK INTEL',
+    fullLabel: '网络情报',
     icon: Network,
     layers: [
-      { key: 'malware', label: 'Live Malware', dataKey: 'malware_threats' },
-      { key: 'cyber_attacks', label: 'Live Attacks', dataKey: 'cyber_attacks' },
+      { key: 'malware', label: '实时恶意软件', dataKey: 'malware_threats' },
+      { key: 'cyber_attacks', label: '实时攻击', dataKey: 'cyber_attacks' },
     ],
   },
   {
     label: 'DISPLAY',
-    fullLabel: 'DISPLAY',
+    fullLabel: '显示',
     icon: Sun,
     layers: [
-      { key: 'day_night', label: 'Day / Night Cycle', dataKey: '' },
-      { key: 'terrain_3d', label: '3D Terrain & Buildings', dataKey: '' },
+      { key: 'day_night', label: '昼夜循环', dataKey: '' },
+      { key: 'terrain_3d', label: '3D地形与建筑', dataKey: '' },
     ],
   },
 ];
@@ -197,7 +197,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
         {/* MOBILE GHOST TOGGLE */}
         {setTheme && (
           <div className="flex items-center justify-between mt-2 pt-3 border-t border-white/[0.06] px-1">
-            <span className="text-[9px] font-mono tracking-[0.2em] text-white/25 uppercase">Ghost Protocol</span>
+            <span className="text-[9px] font-mono tracking-[0.2em] text-white/25 uppercase">幽灵协议</span>
             <button
               onClick={() => setTheme(theme === 'core' ? 'ghost' : 'core')}
               className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
@@ -325,7 +325,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
           style={{
             background: theme === 'ghost' ? 'rgba(179, 136, 255, 0.1)' : 'transparent',
           }}
-          title="Ghost Protocol"
+          title="幽灵协议"
         >
           <Ghost
             className="transition-all duration-500"
