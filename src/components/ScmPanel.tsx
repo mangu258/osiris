@@ -30,9 +30,9 @@ export default function ScmPanel({ data }: ScmPanelProps) {
       <button onClick={() => setExpanded(!expanded)} className="flex items-center justify-between w-full mb-2">
         <div className="flex items-center gap-2">
           <Target className="w-3.5 h-3.5 text-[#00BCD4]" />
-          <span className="hud-text text-[12px] text-[var(--text-primary)]">SCM RISK COMMAND</span>
+          <span className="hud-text text-[12px] text-[var(--text-primary)]">供应链风险指挥</span>
           {totalRisks > 0 && (
-            <span className="gotham-tag gotham-tag--critical" style={{ fontSize: '7px', padding: '1px 4px' }}>{totalRisks} ALERTS</span>
+            <span className="gotham-tag gotham-tag--critical" style={{ fontSize: '7px', padding: '1px 4px' }}>{totalRisks} 警报</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -45,12 +45,11 @@ export default function ScmPanel({ data }: ScmPanelProps) {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden flex flex-col flex-1 min-h-0">
             <div className="space-y-3 mt-2 overflow-y-auto styled-scrollbar pr-1 flex-1 pb-4">
 
-              {/* Market Alerts */}
               {marketAlerts.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <AlertCircle className="w-3 h-3 text-[#FF9500]" />
-                    <span className="text-[9px] font-mono text-[#FF9500] tracking-widest font-bold">MARKET IMPACT ALERTS</span>
+                    <span className="text-[9px] font-mono text-[#FF9500] tracking-widest font-bold">市场影响警报</span>
                   </div>
                   <div className="space-y-1">
                     {marketAlerts.map((alert: string, i: number) => (
@@ -62,14 +61,13 @@ export default function ScmPanel({ data }: ScmPanelProps) {
                 </div>
               )}
 
-              {/* Suppliers */}
               <div>
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <AlertTriangle className="w-3 h-3 text-[#FF1744]" />
-                  <span className="text-[9px] font-mono text-[var(--text-muted)] tracking-widest">CRITICAL SUPPLIERS</span>
+                  <span className="text-[9px] font-mono text-[var(--text-muted)] tracking-widest">关键供应商</span>
                 </div>
                 {criticalSuppliers.length === 0 ? (
-                  <div className="text-[9px] font-mono text-[#00E676] px-2">✓ All monitored Tier 1/2 nodes operational.</div>
+                  <div className="text-[9px] font-mono text-[#00E676] px-2">✓ 所有监控的一级/二级节点运行正常。</div>
                 ) : (
                   <div className="space-y-1">
                     {criticalSuppliers.map((s: any, i: number) => {
@@ -88,14 +86,13 @@ export default function ScmPanel({ data }: ScmPanelProps) {
                 )}
               </div>
 
-              {/* Ports & Chokepoints */}
               <div>
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <Anchor className="w-3 h-3 text-[#FF9500]" />
-                  <span className="text-[9px] font-mono text-[var(--text-muted)] tracking-widest">CONGESTED NODES</span>
+                  <span className="text-[9px] font-mono text-[var(--text-muted)] tracking-widest">拥堵节点</span>
                 </div>
                 {(congestedPorts.length === 0 && riskyChokes.length === 0) ? (
-                  <div className="text-[9px] font-mono text-[#00E676] px-2">✓ Global maritime flow optimal.</div>
+                  <div className="text-[9px] font-mono text-[#00E676] px-2">✓ 全球海运流通畅。</div>
                 ) : (
                   <div className="space-y-1">
                     {riskyChokes.map((c: any, i: number) => (
@@ -114,7 +111,7 @@ export default function ScmPanel({ data }: ScmPanelProps) {
                           <span className="text-[8px] font-mono font-bold px-1 rounded" style={{ background: p.congestion === 'SEVERE' ? '#FF1744' : '#FF9500', color: '#000' }}>{p.congestion}</span>
                         </div>
                         <div className="flex justify-between items-center text-[8px] font-mono text-[#aaa]">
-                          <span>DWELL: <span className="text-[#fff]">{p.dwell_time}</span></span>
+                          <span>滞留: <span className="text-[#fff]">{p.dwell_time}</span></span>
                           <span>{p.volume.split(' | ')[1]}</span>
                         </div>
                       </div>
