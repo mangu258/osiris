@@ -3,20 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, X, MapPin, Navigation, Building2, Globe2, Landmark } from 'lucide-react';
 
-/* ═══════════════════════════════════════════════════════════════
-   OSIRIS — Enhanced Search / Locate Bar
-   Street-level geocoding with intelligent zoom levels
-   Ctrl+F / Cmd+F keyboard shortcut support
-   ═══════════════════════════════════════════════════════════════ */
-
 interface SearchResult {
   label: string;
   lat: number;
   lng: number;
-  type: string;          // nominatim type (e.g. 'house', 'road', 'city')
-  importance: number;    // nominatim importance score
-  category: string;      // nominatim class (e.g. 'place', 'highway', 'building')
-  zoomLevel: number;     // computed ideal zoom
+  type: string;
+  importance: number;
+  category: string;
+  zoomLevel: number;
 }
 
 interface SearchBarProps {
@@ -24,25 +18,21 @@ interface SearchBarProps {
   alwaysExpanded?: boolean;
 }
 
-// Map Nominatim result types to appropriate zoom levels
 function getZoomForType(type: string, category: string, boundingbox?: string[]): number {
-  // If we have a bounding box, use it to estimate zoom
   if (boundingbox && boundingbox.length === 4) {
     const latDiff = Math.abs(parseFloat(boundingbox[1]) - parseFloat(boundingbox[0]));
     const lngDiff = Math.abs(parseFloat(boundingbox[3]) - parseFloat(boundingbox[2]));
     const maxDiff = Math.max(latDiff, lngDiff);
-    // Rough zoom estimation from bounding box span
-    if (maxDiff < 0.002) return 19;  // building / address
-    if (maxDiff < 0.01) return 17;   // street block
-    if (maxDiff < 0.05) return 15;   // neighborhood
-    if (maxDiff < 0.2) return 13;    // small town
-    if (maxDiff < 1) return 11;      // city
-    if (maxDiff < 5) return 8;       // region
-    if (maxDiff < 20) return 6;      // country
-    return 4;                        // continent
+    if (maxDiff < 0.002) return 19;
+    if (maxDiff < 0.01) return 17;
+    if (maxDiff < 0.05) return 15;
+    if (maxDiff < 0.2) return 13;
+    if (maxDiff < 1) return 11;
+    if (maxDiff < 5) return 8;
+    if (maxDiff < 20) return 6;
+    return 4;
   }
 
-  // Fallback: type-based zoom
   if (['house', 'building', 'address', 'shop', 'amenity', 'office'].includes(type)) return 18;
   if (['road', 'street', 'highway', 'path', 'residential', 'tertiary', 'secondary', 'primary'].includes(type)) return 17;
   if (['neighbourhood', 'quarter', 'suburb', 'hamlet', 'isolated_dwelling'].includes(type)) return 15;
@@ -56,10 +46,9 @@ function getZoomForType(type: string, category: string, boundingbox?: string[]):
   if (category === 'highway') return 17;
   if (category === 'building') return 18;
   if (category === 'amenity') return 17;
-  return 13; // safe default
+  return 13;
 }
 
-// Icon for result type
 function getResultIcon(type: string, category: string) {
   if (['house', 'building', 'address', 'shop', 'amenity', 'office'].includes(type) || category === 'building') {
     return <Building2 className="w-3 h-3 text-[var(--cyan-primary)] flex-shrink-0" />;
@@ -76,7 +65,6 @@ function getResultIcon(type: string, category: string) {
   return <MapPin className="w-3 h-3 text-[var(--gold-primary)] flex-shrink-0" />;
 }
 
-// Format label: keep it concise
 function formatLabel(displayName: string): { primary: string; secondary: string } {
   const parts = displayName.split(',').map(s => s.trim());
   if (parts.length <= 1) return { primary: parts[0] || '', secondary: '' };
@@ -96,14 +84,12 @@ export default function SearchBar({ onLocate, alwaysExpanded = false }: SearchBa
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Focus input when opened
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
 
-  // Ctrl+F / Cmd+F keyboard shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
@@ -120,7 +106,6 @@ export default function SearchBar({ onLocate, alwaysExpanded = false }: SearchBa
     return () => window.removeEventListener('keydown', handler, true);
   }, []);
 
-  // Close when clicking outside
   useEffect(() => {
     if (!open || alwaysExpanded) return;
     const handler = (e: MouseEvent) => {
@@ -145,7 +130,6 @@ export default function SearchBar({ onLocate, alwaysExpanded = false }: SearchBa
     setValue(q);
     setSelectedIdx(-1);
 
-    // Direct coordinate input
     const coords = parseCoords(q);
     if (coords) {
       setResults([{
@@ -165,10 +149,9 @@ export default function SearchBar({ onLocate, alwaysExpanded = false }: SearchBa
     timerRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        // Use addressdetails=1 for better type detection and limit=8 for more results
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&addressdetails=1&extratags=1`,
-          { headers: { 'Accept-Language': 'en', 'User-Agent': 'OSIRIS-Intelligence-Platform/1.0' } }
+          { headers: { 'Accept-Language': 'zh', 'User-Agent': 'OSIRIS-Intelligence-Platform/1.0' } }
         );
         const data = await res.json();
         setResults(data.map((r: any) => {
@@ -233,7 +216,7 @@ export default function SearchBar({ onLocate, alwaysExpanded = false }: SearchBa
         className="flex items-center gap-1.5 glass-panel-sm px-3 py-2 text-[9px] font-mono tracking-[0.15em] text-[var(--text-muted)] hover:text-[var(--gold-primary)] hover:border-[var(--border-active)] transition-all hover:shadow-[0_0_12px_rgba(212,175,55,0.08)]"
       >
         <Search className="w-3 h-3" />
-        CMD: LOCATE
+        定位搜索
       </button>
     );
   }
@@ -249,7 +232,7 @@ export default function SearchBar({ onLocate, alwaysExpanded = false }: SearchBa
           value={value}
           onChange={(e) => handleSearch(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="SEARCH ADDRESS, CITY, OR COORDINATES..."
+          placeholder="搜索地址、城市或坐标..."
           className="flex-1 bg-transparent text-[10px] text-[var(--text-primary)] font-mono tracking-wider outline-none placeholder:text-[var(--text-muted)]"
           autoComplete="off"
           spellCheck={false}
@@ -292,7 +275,7 @@ export default function SearchBar({ onLocate, alwaysExpanded = false }: SearchBa
                 </div>
                 <div className="flex flex-col items-end flex-shrink-0">
                   <span className="text-[7px] text-[var(--text-muted)] font-mono uppercase tracking-wider">
-                    {r.type === 'coordinate' ? 'COORDS' : r.type}
+                    {r.type === 'coordinate' ? '坐标' : r.type}
                   </span>
                   <span className="text-[7px] text-[var(--gold-primary)] font-mono opacity-40">
                     Z{r.zoomLevel}
